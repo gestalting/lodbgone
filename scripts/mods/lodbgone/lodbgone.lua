@@ -38,7 +38,7 @@ end
 --init
 mod:hook_safe(CLASS.PlayerUnitVisualLoadoutExtension, "init", function(self, extension_init_context, unit, extension_init_data)
 	if not unit or not Unit.is_valid(unit) then
-		mod:error("init hook not valid")
+		mod:debug("init hook not valid")
 		return
 	end
 
@@ -70,7 +70,7 @@ end)
 --weapon is equipped/swapped
 mod:hook_safe(CLASS.PlayerUnitWeaponExtension, "on_slot_wielded", function(self, unit)
 	if not unit or not Unit.is_valid(unit) then
-		mod:warning("Hook: on_slot_wielded not valid")
+		mod:debug("Hook: on_slot_wielded not valid")
 		return
 	end
 	mod:debug("Hook: on_slot_wielded successful")
