@@ -1,5 +1,18 @@
 local mod = get_mod("lodbgone")
 
+--keep track of shit already forced to 0
+local processed_menu_units = {}
+
+--operator select screen
+mod:hook_safe(CLASS.MainMenuView, "update", function(self, dt)
+	local char_unit = self._profile_character_unit
+	if char_unit and Unit.is_valid(char_unit) and not processed_menu_units[char_unit] then
+		force_unit_lod(char_unit)
+		processed_menu_units[char_unit] = true -- mark as processed, only run once
+	end
+end)
+
+
 local function force_unit_lod(unit)
     if not unit or not Unit.is_valid(unit) then 
 	mod:debug("force_unit_lod: invalid unit, skipping")
@@ -60,6 +73,8 @@ mod:hook_safe(CLASS.PlayerUnitVisualLoadoutExtension, "init", function(self, ext
 	end
 end)
 
+
+--[[
 -- newly equipped item
 mod:hook_safe(CLASS.PlayerUnitVisualLoadoutExtension, "_equip_item_to_slot", function(self, slot_name, item_unit, ...)
     if item_unit and Unit.is_valid(item_unit) then
@@ -67,27 +82,34 @@ mod:hook_safe(CLASS.PlayerUnitVisualLoadoutExtension, "_equip_item_to_slot", fun
     end
 end)
 
---weapon is equipped/swapped
-mod:hook_safe(CLASS.PlayerUnitWeaponExtension, "on_slot_wielded", function(self, unit)
-	if not unit or not Unit.is_valid(unit) then
-		mod:debug("Hook: on_slot_wielded not valid")
+--]]
+
+-- weapon is equipped/swapped
+mod:hook_safe(CLASS.PlayerUnitWeaponExtension, "on_slot_wielded", function(self, slot_name, t, skip_wield_action)
+	if not slot_name then
+		mod:debug("Hook: on_slot_wielded skipped - no slot_name")
 		return
 	end
-	mod:debug("Hook: on_slot_wielded successful")
-	force_unit_lod(unit)
+
+	-- retrieve weapon data by slot name
+	local weapon = self._weapons[slot_name]
+	if not weapon then return end
+
+	local weapon_unit = weapon.weapon_unit or weapon.item
+
+	if weapon_unit and Unit.is_valid(weapon_unit) then
+		mod:debug("Hook: on_slot_wielded successful for %s", slot_name)
+		force_unit_lod(weapon_unit)
+	else
+		mod:debug("Hook: on_slot_wielded - valid unit not found in weapon data")
+	end
 end)
+
 
 --inventory background menu
 mod:hook_safe(CLASS.InventoryBackgroundView, "update", function(self, dt)
 	if self._background_unit and Unit.is_valid(self._background_unit) then
 		force_unit_lod(self._background_unit)
-	end
-end)
-
---operator select screen
-mod:hook_safe(CLASS.MainMenuView, "update", function(self, dt)
-	if self._profile_character_unit and Unit.is_valid(self._profile_character_unit) then
-		force_unit_lod(self._profile_character_unit)
 	end
 end)
 
