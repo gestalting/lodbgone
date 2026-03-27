@@ -46,17 +46,6 @@ mod:hook_safe(UIProfileSpawner, "_spawn_character_profile", function(self, profi
 	end
 end)
 
--- inventory background menu - force LOD on spawned character
-mod:hook_safe(UIProfileSpawner, "_spawn_character_profile", function(self, profile, profile_loader, position, rotation, scale, state_machine, animation_event, face_state_machine_key, face_animation_event, force_highest_mip, disable_hair_state_machine, optional_unit_3p, optional_ignore_state_machine, companion_data)
-	if self._character_spawn_data and self._character_spawn_data.unit_3p and Unit.has_lod_object(self._character_spawn_data.unit_3p, "lod") then
-		force_unit_lod(self._character_spawn_data.unit_3p)
-	end
-
-	if companion_data.unit_3p and Unit.has_lod_object(companion_data.unit_3p, "lod") then
-		force_unit_lod(companion_data.unit_3p)
-	end
-end)
-
 -- init
 mod:hook_safe(CLASS.PlayerUnitVisualLoadoutExtension, "init", function(self, extension_init_context, unit, extension_init_data)
 	if not unit or not Unit.is_valid(unit) then
@@ -155,16 +144,43 @@ mod:hook_safe(CLASS.PlayerUnitWeaponExtension, "on_slot_wielded", function(self,
 	end
 end)
 
--- after attachment spawning in visual_loadout_customization
-mod:hook_safe(VisualLoadoutCustomization, "spawn_item_attachments", function(self, item_data, override_lookup, attach_settings, item_unit, optional_map_attachment_name_to_unit, optional_extract_attachment_units_bind_poses, optional_extract_item_names, optional_mission_template, optional_equipment)
-	if not item_unit or not Unit.is_valid(item_unit) then return end
+mod:hook_safe(PlayerUnitWeaponExtension, "on_player_unit_respawn", function(self, respawn_ammo_percentage)
+	--for weapons in self_unit?
 
-	-- Force LOD on spawned attachment units
-	local attachment_units_by_unit = override_lookup and override_lookup.attachment_units_by_unit or attachment_units_by_unit or {}
-	for attachment_unit, _ in pairs(attachment_units_by_unit) do
-		if attachment_unit and Unit.has_lod_object(attachment_unit, "lod") then
-			force_unit_lod(attachment_unit)
-		end
+end)
+
+
+mod:hook_safe(PlayerUnitWeaponExtension, "on_wieldable_slot_equipped", function (self, item, slot_name, weapon_unit, fx_sources, t, optional_existing_unit_3p, from_server_correction_occurred)
+	if not slot_name then
+		mod:debug("Hook: on_slot_wielded skipped - no slot_name")
+		mod:debug(slot_name)
+		return
+	end
+
+	-- retrieve weapon data by slot name
+	local weapon = self._weapons[slot_name]
+	if not weapon then return end
+
+	-- Force LOD on weapon unit
+	local weapon_unit = weapon.weapon_unit
+	if weapon_unit and Unit.has_lod_object(weapon_unit, "lod") then
+		mod:debug("Hook: on_slot_wielded successful for %s", slot_name)
+		force_unit_lod(weapon_unit)
+	else
+		mod:debug("Hook: on_slot_wielded - no LOD data on weapon unit for %s", slot_name)
 	end
 end)
 
+mod:hook_safe(Weapon, "init",  function (self, init_data)
+	
+
+end)
+
+
+	if attach_settings.from_script_component then
+		spawned_unit = World.spawn_unit_ex(attach_settings.world, base_unit, nil, pose)
+	elseif attach_settings.is_minion then
+		spawned_unit = attach_settings.unit_spawner:spawn_unit(base_unit, attach_settings.attach_pose)
+	else
+		spawned_unit = attach_settings.unit_spawner:spawn_unit(base_unit, pose)
+	end
